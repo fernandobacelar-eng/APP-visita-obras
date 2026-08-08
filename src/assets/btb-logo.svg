@@ -1,9 +1,0 @@
-<svg viewBox="0 0 340 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BTB Engenharia">
-  <rect x="9" y="9" width="36" height="36" rx="6" fill="#152a52" transform="rotate(45 27 27)"/>
-  <rect x="55" y="9" width="36" height="36" rx="6" fill="#152a52" transform="rotate(45 73 27)"/>
-  <rect x="9" y="55" width="36" height="36" rx="6" fill="#152a52" transform="rotate(45 27 73)"/>
-  <rect x="55" y="55" width="36" height="36" rx="6" fill="#152a52" transform="rotate(45 73 73)"/>
-  <rect x="40" y="40" width="20" height="20" rx="3" fill="#f2a71b" transform="rotate(45 50 50)"/>
-  <text x="115" y="63" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="58" fill="#152a52">BTB</text>
-  <text x="117" y="86" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="15" letter-spacing="4" fill="#152a52">ENGENHARIA</text>
-</svg>

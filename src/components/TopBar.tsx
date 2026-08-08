@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import btbMark from '../assets/btb-mark.svg'
 
 export function TopBar({
   title,
@@ -34,9 +33,7 @@ export function TopBar({
           ←
         </button>
       )}
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white p-1.5">
-        <img src={btbMark} alt="BTB" className="h-full w-full" />
-      </div>
+      <span className="shrink-0 text-lg font-extrabold tracking-tight text-white">BTB</span>
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-xl font-bold leading-tight">{title}</h1>
         {subtitle && <p className="truncate text-sm text-white/80">{subtitle}</p>}
