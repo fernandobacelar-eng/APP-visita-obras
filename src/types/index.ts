@@ -26,8 +26,10 @@ export interface Servico {
   nome: string
   /** Texto bruto de status como veio da planilha (ex: "Em execução") */
   statusImportado: string
-  /** Status normalizado para exibição de badge/filtro */
+  /** Status normalizado para exibição de badge/filtro — pode ser alterado manualmente na visita */
   statusNormalizado: StatusServico
+  /** Status normalizado como veio da planilha, nunca alterado — usado para detectar mudanças feitas na visita */
+  statusOriginal: StatusServico
   observacaoImportada?: string
   ordem: number
 }
@@ -49,6 +51,7 @@ export interface Foto {
   id: number
   registroId: number
   blob: Blob
+  legenda: string
   criadoEm: string
 }
 

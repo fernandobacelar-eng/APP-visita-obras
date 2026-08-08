@@ -6,13 +6,19 @@ import { Button } from '../../components/Button'
 import { StatusBadge } from '../../components/StatusBadge'
 import { EmptyState } from '../../components/EmptyState'
 import { getVisitaAtiva, getResumoVisita, type ResumoPavimento, type ResumoServico } from '../../db/repository'
-import type { Visita } from '../../types'
+import type { Foto, Visita } from '../../types'
 import { useObjectUrl } from '../../hooks/useObjectUrl'
+import { STATUS_LABEL } from '../../lib/status'
 
-function FotoMini({ blob }: { blob: Blob }) {
-  const url = useObjectUrl(blob)
+function FotoMini({ foto }: { foto: Foto }) {
+  const url = useObjectUrl(foto.blob)
   if (!url) return null
-  return <img src={url} alt="Foto" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+  return (
+    <div className="w-20 shrink-0">
+      <img src={url} alt={foto.legenda || 'Foto'} className="h-20 w-20 rounded-lg object-cover" />
+      {foto.legenda.trim() && <p className="mt-1 text-xs break-words text-gray-600">{foto.legenda}</p>}
+    </div>
+  )
 }
 
 function AnotacaoGeralResumo({ pavimento }: { pavimento: ResumoPavimento }) {
@@ -38,9 +44,9 @@ function AnotacaoGeralResumo({ pavimento }: { pavimento: ResumoPavimento }) {
       ))}
 
       {fotosGerais.length > 0 && (
-        <div className="mt-2 flex gap-2 overflow-x-auto">
+        <div className="mt-2 flex gap-3 overflow-x-auto">
           {fotosGerais.map((f) => (
-            <FotoMini key={f.id} blob={f.blob} />
+            <FotoMini key={f.id} foto={f} />
           ))}
         </div>
       )}
@@ -49,8 +55,12 @@ function AnotacaoGeralResumo({ pavimento }: { pavimento: ResumoPavimento }) {
 }
 
 function ServicoResumo({ servico }: { servico: ResumoServico }) {
+  const statusAlterado = servico.statusOriginal !== servico.statusNormalizado
   const temConteudo =
-    !!servico.registro?.textoAnotacao.trim() || servico.fotos.length > 0 || servico.audios.length > 0
+    !!servico.registro?.textoAnotacao.trim() ||
+    servico.fotos.length > 0 ||
+    servico.audios.length > 0 ||
+    statusAlterado
 
   return (
     <Card className={temConteudo ? '' : 'opacity-60'}>
@@ -58,6 +68,12 @@ function ServicoResumo({ servico }: { servico: ResumoServico }) {
         <p className="text-lg font-bold text-brand-dark">{servico.nome}</p>
         <StatusBadge status={servico.statusNormalizado} />
       </div>
+
+      {statusAlterado && (
+        <p className="mt-1 text-sm font-semibold text-brand">
+          🔄 Status alterado nesta visita: {STATUS_LABEL[servico.statusOriginal]} → {STATUS_LABEL[servico.statusNormalizado]}
+        </p>
+      )}
 
       {!temConteudo && <p className="mt-1 text-sm text-gray-400">Sem registro nesta visita.</p>}
 
@@ -75,9 +91,9 @@ function ServicoResumo({ servico }: { servico: ResumoServico }) {
       ))}
 
       {servico.fotos.length > 0 && (
-        <div className="mt-2 flex gap-2 overflow-x-auto">
+        <div className="mt-2 flex gap-3 overflow-x-auto">
           {servico.fotos.map((f) => (
-            <FotoMini key={f.id} blob={f.blob} />
+            <FotoMini key={f.id} foto={f} />
           ))}
         </div>
       )}
@@ -124,7 +140,11 @@ export function ResumoVisita() {
       ...p,
       servicos: apenasComRegistro
         ? p.servicos.filter(
-            (s) => s.registro?.textoAnotacao.trim() || s.fotos.length > 0 || s.audios.length > 0
+            (s) =>
+              s.registro?.textoAnotacao.trim() ||
+              s.fotos.length > 0 ||
+              s.audios.length > 0 ||
+              s.statusOriginal !== s.statusNormalizado
           )
         : p.servicos,
     }))

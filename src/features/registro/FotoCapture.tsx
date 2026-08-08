@@ -2,12 +2,28 @@ import { useRef, useState } from 'react'
 import type { Foto } from '../../types'
 import { useObjectUrl } from '../../hooks/useObjectUrl'
 
-function FotoThumb({ foto, onRemover }: { foto: Foto; onRemover: (id: number) => void }) {
+function FotoThumb({
+  foto,
+  onRemover,
+  onLegendaChange,
+}: {
+  foto: Foto
+  onRemover: (id: number) => void
+  onLegendaChange: (id: number, legenda: string) => void
+}) {
   const url = useObjectUrl(foto.blob)
   const [ampliada, setAmpliada] = useState(false)
+  const [legenda, setLegenda] = useState(foto.legenda)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleLegendaChange(texto: string) {
+    setLegenda(texto)
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => onLegendaChange(foto.id, texto), 500)
+  }
 
   return (
-    <>
+    <div>
       <div className="relative aspect-square overflow-hidden rounded-xl border border-gray-200">
         {url && (
           <img
@@ -25,6 +41,12 @@ function FotoThumb({ foto, onRemover }: { foto: Foto; onRemover: (id: number) =>
           ×
         </button>
       </div>
+      <input
+        value={legenda}
+        onChange={(e) => handleLegendaChange(e.target.value)}
+        placeholder="Legenda da foto…"
+        className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1 text-sm"
+      />
       {ampliada && url && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
@@ -33,7 +55,7 @@ function FotoThumb({ foto, onRemover }: { foto: Foto; onRemover: (id: number) =>
           <img src={url} alt="Foto ampliada" className="max-h-full max-w-full object-contain" />
         </div>
       )}
-    </>
+    </div>
   )
 }
 
@@ -41,10 +63,12 @@ export function FotoCapture({
   fotos,
   onAdicionar,
   onRemover,
+  onLegendaChange,
 }: {
   fotos: Foto[]
   onAdicionar: (files: FileList) => void
   onRemover: (id: number) => void
+  onLegendaChange: (id: number, legenda: string) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -70,9 +94,9 @@ export function FotoCapture({
       </button>
 
       {fotos.length > 0 && (
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-3">
           {fotos.map((f) => (
-            <FotoThumb key={f.id} foto={f} onRemover={onRemover} />
+            <FotoThumb key={f.id} foto={f} onRemover={onRemover} onLegendaChange={onLegendaChange} />
           ))}
         </div>
       )}

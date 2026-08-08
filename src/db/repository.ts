@@ -83,6 +83,7 @@ export async function criarVisitaComPavimentos(
         nome: s.nome,
         statusImportado: s.status,
         statusNormalizado: s.statusNormalizado,
+        statusOriginal: s.statusNormalizado,
         observacaoImportada: s.observacao,
         ordem: ordemServico++,
       })
@@ -183,11 +184,15 @@ export async function atualizarRegistro(
 }
 
 export async function adicionarFoto(registroId: number, blob: Blob): Promise<number> {
-  return db.fotos.add({ registroId, blob, criadoEm: new Date().toISOString() })
+  return db.fotos.add({ registroId, blob, legenda: '', criadoEm: new Date().toISOString() })
 }
 
 export async function removerFoto(fotoId: number): Promise<void> {
   await db.fotos.delete(fotoId)
+}
+
+export async function atualizarLegendaFoto(fotoId: number, legenda: string): Promise<void> {
+  await db.fotos.update(fotoId, { legenda })
 }
 
 export async function getFotos(registroId: number) {

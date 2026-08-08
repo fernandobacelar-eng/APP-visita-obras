@@ -9,6 +9,7 @@ import {
   getFotos,
   adicionarFoto,
   removerFoto,
+  atualizarLegendaFoto,
   getAudios,
   adicionarAudio,
   removerAudio,
@@ -75,6 +76,11 @@ export function AnotacoesGeraisPavimento() {
     if (registro?.id) setFotos(await getFotos(registro.id))
   }
 
+  async function handleLegendaChange(fotoId: number, legenda: string) {
+    await atualizarLegendaFoto(fotoId, legenda)
+    setFotos((atual) => atual.map((f) => (f.id === fotoId ? { ...f, legenda } : f)))
+  }
+
   async function handleGravado(blob: Blob, transcricao: string | null, status: StatusTranscricao) {
     if (!registro?.id) return
     await adicionarAudio(registro.id, blob, transcricao, status)
@@ -99,7 +105,12 @@ export function AnotacoesGeraisPavimento() {
 
         <Card>
           <h2 className="mb-3 text-lg font-bold text-brand-dark">Fotos</h2>
-          <FotoCapture fotos={fotos} onAdicionar={handleAdicionarFotos} onRemover={handleRemoverFoto} />
+          <FotoCapture
+            fotos={fotos}
+            onAdicionar={handleAdicionarFotos}
+            onRemover={handleRemoverFoto}
+            onLegendaChange={handleLegendaChange}
+          />
         </Card>
 
         <Card>
