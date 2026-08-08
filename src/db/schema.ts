@@ -19,6 +19,11 @@ class VisitaObraDB extends Dexie {
       fotos: '++id, registroId',
       audios: '++id, registroId',
     })
+    // v2: registros passam a poder pertencer a um pavimento inteiro (anotações
+    // gerais), além de a um serviço específico.
+    this.version(2).stores({
+      registros: '++id, &servicoId, &pavimentoId',
+    })
   }
 }
 

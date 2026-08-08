@@ -4,7 +4,13 @@ import { TopBar } from '../../components/TopBar'
 import { Card } from '../../components/Card'
 import { EmptyState } from '../../components/EmptyState'
 import { Button } from '../../components/Button'
-import { getVisitaAtiva, getPavimentos, contarRegistrosDoPavimento, getServicosEmExecucao } from '../../db/repository'
+import {
+  getVisitaAtiva,
+  getPavimentos,
+  contarRegistrosDoPavimento,
+  getServicosEmExecucao,
+  finalizarVisita,
+} from '../../db/repository'
 import type { Visita, Pavimento } from '../../types'
 
 interface LinhaPavimento extends Pavimento {
@@ -44,6 +50,14 @@ export function PavimentosList() {
   useEffect(() => {
     if (visita === null) navigate('/', { replace: true })
   }, [visita, navigate])
+
+  async function handleConcluirVisita() {
+    if (visita === 'carregando' || visita === null) return
+    if (visita.status !== 'finalizada') {
+      await finalizarVisita(visita.id)
+    }
+    navigate('/resumo')
+  }
 
   if (visita === 'carregando' || visita === null || linhas === null) return null
 
@@ -96,6 +110,10 @@ export function PavimentosList() {
             </div>
           </Card>
         ))}
+
+        <Button variant="accent" fullWidth onClick={handleConcluirVisita}>
+          {visita.status === 'finalizada' ? '✅ Visita concluída — ver relatório' : '✅ Visita concluída'}
+        </Button>
 
         <Button variant="secondary" fullWidth onClick={() => navigate('/')}>
           Importar outra planilha

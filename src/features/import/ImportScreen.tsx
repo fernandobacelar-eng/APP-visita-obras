@@ -6,6 +6,7 @@ import { Card } from '../../components/Card'
 import { getVisitaAtiva, criarVisitaComPavimentos } from '../../db/repository'
 import type { Visita } from '../../types'
 import { parseExcelFile, ExcelParseError, type ParseResult } from './excelParser'
+import btbLogo from '../../assets/btb-logo.svg'
 
 export function ImportScreen() {
   const navigate = useNavigate()
@@ -55,15 +56,18 @@ export function ImportScreen() {
     <div className="flex min-h-svh flex-col bg-gray-50">
       <TopBar title="Visita à Obra" subtitle="Importar planilha" />
       <main className="flex-1 space-y-4 p-4 pb-10">
+        <img src={btbLogo} alt="BTB Engenharia" className="mx-auto h-16" />
         {visitaAtiva && !parseResult && (
           <Card className="border-accent bg-accent/10">
-            <p className="font-semibold text-brand-dark">Visita em andamento</p>
+            <p className="font-semibold text-brand-dark">
+              {visitaAtiva.status === 'finalizada' ? 'Última visita concluída' : 'Visita em andamento'}
+            </p>
             <p className="mt-1 text-base text-gray-700">
               {visitaAtiva.obraNome} — importada em{' '}
               {new Date(visitaAtiva.dataImportacao).toLocaleDateString('pt-BR')}
             </p>
             <Button className="mt-3" fullWidth onClick={() => navigate('/pavimentos')}>
-              Continuar visita
+              {visitaAtiva.status === 'finalizada' ? 'Ver visita' : 'Continuar visita'}
             </Button>
           </Card>
         )}

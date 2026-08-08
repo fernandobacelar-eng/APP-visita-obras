@@ -37,3 +37,15 @@ button {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  a[href]::after {
+    content: none !important;
+  }
+}

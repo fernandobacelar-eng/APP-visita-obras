@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { TopBar } from '../../components/TopBar'
 import { Card } from '../../components/Card'
@@ -8,7 +8,7 @@ import {
   getPavimento,
   getServicosDoPavimento,
   servicoTemRegistroPreenchido,
-  atualizarAnotacaoGeral,
+  pavimentoTemAnotacaoGeral,
 } from '../../db/repository'
 import type { Pavimento, Servico, StatusServico } from '../../types'
 import { STATUS_LABEL } from '../../lib/status'
@@ -31,17 +31,19 @@ export function ServicosList() {
   const [pavimento, setPavimento] = useState<Pavimento | null>(null)
   const [servicos, setServicos] = useState<LinhaServico[]>([])
   const [filtro, setFiltro] = useState<'todos' | StatusServico>('todos')
-  const [anotacaoGeral, setAnotacaoGeral] = useState('')
-  const [salvo, setSalvo] = useState(true)
-  const anotacaoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [temAnotacaoGeral, setTemAnotacaoGeral] = useState(false)
 
   useEffect(() => {
     async function carregar() {
       const id = Number(pavimentoId)
       if (!id) return
-      const [pav, servs] = await Promise.all([getPavimento(id), getServicosDoPavimento(id)])
+      const [pav, servs, anotado] = await Promise.all([
+        getPavimento(id),
+        getServicosDoPavimento(id),
+        pavimentoTemAnotacaoGeral(id),
+      ])
       setPavimento(pav ?? null)
-      setAnotacaoGeral(pav?.anotacaoGeral ?? '')
+      setTemAnotacaoGeral(anotado)
       const comRegistro = await Promise.all(
         servs.map(async (s) => ({ ...s, registrado: s.id != null && (await servicoTemRegistroPreenchido(s.id)) }))
       )
@@ -49,16 +51,6 @@ export function ServicosList() {
     }
     carregar()
   }, [pavimentoId])
-
-  function handleAnotacaoGeralChange(texto: string) {
-    setAnotacaoGeral(texto)
-    if (!pavimento) return
-    setSalvo(false)
-    if (anotacaoTimer.current) clearTimeout(anotacaoTimer.current)
-    anotacaoTimer.current = setTimeout(() => {
-      atualizarAnotacaoGeral(pavimento.id, texto).then(() => setSalvo(true))
-    }, 500)
-  }
 
   const filtrados = filtro === 'todos' ? servicos : servicos.filter((s) => s.statusNormalizado === filtro)
 
@@ -87,18 +79,24 @@ export function ServicosList() {
       </div>
 
       <main className="flex-1 space-y-3 p-4 pb-10">
-        <Card>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-brand-dark">Anotações gerais do pavimento</h2>
-            <span className="text-xs text-gray-400">{salvo ? 'Salvo' : 'Salvando…'}</span>
+        <Card
+          className="cursor-pointer border-2 border-accent active:bg-accent/10"
+          onClick={() => navigate(`/pavimentos/${pavimentoId}/anotacoes`)}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-lg font-bold text-brand-dark">📝 Anotações gerais do pavimento</p>
+              <p className="mt-0.5 text-sm text-gray-500">Fotos e observações não ligadas a um serviço específico</p>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              {temAnotacaoGeral && (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-status-concluido text-white">
+                  ✓
+                </span>
+              )}
+              <span className="text-2xl text-gray-300">›</span>
+            </div>
           </div>
-          <textarea
-            value={anotacaoGeral}
-            onChange={(e) => handleAnotacaoGeralChange(e.target.value)}
-            placeholder="Observações sobre o pavimento como um todo, não ligadas a um serviço específico…"
-            rows={3}
-            className="mt-2 w-full rounded-xl border-2 border-gray-300 p-3 text-base leading-relaxed"
-          />
         </Card>
 
         {filtrados.length === 0 && (

@@ -8,8 +8,14 @@ import type {
   StatusTranscricao,
 } from '../types'
 
+/**
+ * Retorna a visita atual (a única que existe por vez — importar uma nova
+ * planilha substitui a anterior), esteja ela em andamento ou já finalizada.
+ * Não filtra por status: uma visita concluída continua sendo "a visita
+ * atual" até que uma nova planilha seja importada.
+ */
 export async function getVisitaAtiva(): Promise<Visita | undefined> {
-  return db.visitas.where('status').equals('em_andamento').first()
+  return db.visitas.orderBy('id').last()
 }
 
 export async function criarVisitaComPavimentos(
@@ -41,6 +47,14 @@ export async function criarVisitaComPavimentos(
           await db.registros.where('servicoId').equals(s.id).delete()
         }
         await db.servicos.where('pavimentoId').equals(p.id).delete()
+
+        const regsGerais = await db.registros.where('pavimentoId').equals(p.id).toArray()
+        for (const r of regsGerais) {
+          if (r.id == null) continue
+          await db.fotos.where('registroId').equals(r.id).delete()
+          await db.audios.where('registroId').equals(r.id).delete()
+        }
+        await db.registros.where('pavimentoId').equals(p.id).delete()
       }
       await db.pavimentos.where('visitaId').equals(antiga.id).delete()
       await db.visitas.delete(antiga.id)
@@ -61,7 +75,6 @@ export async function criarVisitaComPavimentos(
       visitaId,
       nome: pav.nome,
       ordem: ordemPavimento++,
-      anotacaoGeral: '',
     })
     let ordemServico = 0
     for (const s of pav.servicos) {
@@ -104,10 +117,6 @@ export async function getPavimento(pavimentoId: number): Promise<Pavimento | und
   return db.pavimentos.get(pavimentoId)
 }
 
-export async function atualizarAnotacaoGeral(pavimentoId: number, texto: string): Promise<void> {
-  await db.pavimentos.update(pavimentoId, { anotacaoGeral: texto })
-}
-
 export async function getOuCriarRegistro(servicoId: number): Promise<Registro> {
   const existente = await db.registros.where('servicoId').equals(servicoId).first()
   if (existente) return existente
@@ -128,6 +137,28 @@ export async function getOuCriarRegistro(servicoId: number): Promise<Registro> {
     // o registro que a primeira já criou.
     if (err instanceof Dexie.ConstraintError) {
       const criadoPeloConcorrente = await db.registros.where('servicoId').equals(servicoId).first()
+      if (criadoPeloConcorrente) return criadoPeloConcorrente
+    }
+    throw err
+  }
+}
+
+export async function getOuCriarRegistroPavimento(pavimentoId: number): Promise<Registro> {
+  const existente = await db.registros.where('pavimentoId').equals(pavimentoId).first()
+  if (existente) return existente
+  const agora = new Date().toISOString()
+  try {
+    const id = await db.registros.add({
+      pavimentoId,
+      criadoEm: agora,
+      atualizadoEm: agora,
+      textoAnotacao: '',
+      qdpPlaceholder: '',
+    })
+    return (await db.registros.get(id))!
+  } catch (err) {
+    if (err instanceof Dexie.ConstraintError) {
+      const criadoPeloConcorrente = await db.registros.where('pavimentoId').equals(pavimentoId).first()
       if (criadoPeloConcorrente) return criadoPeloConcorrente
     }
     throw err
@@ -188,6 +219,15 @@ export async function servicoTemRegistroPreenchido(servicoId: number): Promise<b
   return false
 }
 
+export async function pavimentoTemAnotacaoGeral(pavimentoId: number): Promise<boolean> {
+  const reg = await db.registros.where('pavimentoId').equals(pavimentoId).first()
+  if (!reg || reg.id == null) return false
+  if (reg.textoAnotacao.trim()) return true
+  if ((await db.fotos.where('registroId').equals(reg.id).count()) > 0) return true
+  if ((await db.audios.where('registroId').equals(reg.id).count()) > 0) return true
+  return false
+}
+
 export async function contarRegistrosDoPavimento(pavimentoId: number): Promise<{ total: number; comRegistro: number }> {
   const servicos = await getServicosDoPavimento(pavimentoId)
   let comRegistro = 0
@@ -210,6 +250,9 @@ export interface ResumoServico extends Servico {
 
 export interface ResumoPavimento extends Pavimento {
   servicos: ResumoServico[]
+  registroGeral: Registro | null
+  fotosGerais: Awaited<ReturnType<typeof getFotos>>
+  audiosGerais: Awaited<ReturnType<typeof getAudios>>
 }
 
 export async function getResumoVisita(visitaId: number): Promise<ResumoPavimento[]> {
@@ -227,7 +270,12 @@ export async function getResumoVisita(visitaId: number): Promise<ResumoPavimento
       const audios = registro?.id != null ? await getAudios(registro.id) : []
       servicosComRegistro.push({ ...s, registro, fotos, audios })
     }
-    resultado.push({ ...pav, servicos: servicosComRegistro })
+
+    const registroGeral = (await db.registros.where('pavimentoId').equals(pav.id).first()) ?? null
+    const fotosGerais = registroGeral?.id != null ? await getFotos(registroGeral.id) : []
+    const audiosGerais = registroGeral?.id != null ? await getAudios(registroGeral.id) : []
+
+    resultado.push({ ...pav, servicos: servicosComRegistro, registroGeral, fotosGerais, audiosGerais })
   }
 
   return resultado

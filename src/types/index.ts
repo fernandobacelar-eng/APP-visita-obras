@@ -18,8 +18,6 @@ export interface Pavimento {
   visitaId: number
   nome: string
   ordem: number
-  /** Anotações gerais do pavimento, não ligadas a um serviço específico */
-  anotacaoGeral: string
 }
 
 export interface Servico {
@@ -36,11 +34,14 @@ export interface Servico {
 
 export interface Registro {
   id: number
-  servicoId: number
+  /** Presente quando o registro é de um serviço específico */
+  servicoId?: number
+  /** Presente quando o registro é das anotações gerais de um pavimento */
+  pavimentoId?: number
   criadoEm: string
   atualizadoEm: string
   textoAnotacao: string
-  /** Campo reservado para a futura "Verificação QDP" — sem lógica na v1 */
+  /** Campo reservado para a futura "Verificação QDP" — sem lógica na v1 (só se aplica a registros de serviço) */
   qdpPlaceholder: string
 }
 
