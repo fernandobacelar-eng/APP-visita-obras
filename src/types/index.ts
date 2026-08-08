@@ -18,6 +18,8 @@ export interface Pavimento {
   visitaId: number
   nome: string
   ordem: number
+  /** Anotações gerais do pavimento, não ligadas a um serviço específico */
+  anotacaoGeral: string
 }
 
 export interface Servico {

@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { TopBar } from '../../components/TopBar'
 import { Card } from '../../components/Card'
 import { StatusBadge } from '../../components/StatusBadge'
 import { EmptyState } from '../../components/EmptyState'
-import { getPavimento, getServicosDoPavimento, servicoTemRegistroPreenchido } from '../../db/repository'
+import {
+  getPavimento,
+  getServicosDoPavimento,
+  servicoTemRegistroPreenchido,
+  atualizarAnotacaoGeral,
+} from '../../db/repository'
 import type { Pavimento, Servico, StatusServico } from '../../types'
 import { STATUS_LABEL } from '../../lib/status'
 
@@ -26,6 +31,9 @@ export function ServicosList() {
   const [pavimento, setPavimento] = useState<Pavimento | null>(null)
   const [servicos, setServicos] = useState<LinhaServico[]>([])
   const [filtro, setFiltro] = useState<'todos' | StatusServico>('todos')
+  const [anotacaoGeral, setAnotacaoGeral] = useState('')
+  const [salvo, setSalvo] = useState(true)
+  const anotacaoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     async function carregar() {
@@ -33,6 +41,7 @@ export function ServicosList() {
       if (!id) return
       const [pav, servs] = await Promise.all([getPavimento(id), getServicosDoPavimento(id)])
       setPavimento(pav ?? null)
+      setAnotacaoGeral(pav?.anotacaoGeral ?? '')
       const comRegistro = await Promise.all(
         servs.map(async (s) => ({ ...s, registrado: s.id != null && (await servicoTemRegistroPreenchido(s.id)) }))
       )
@@ -40,6 +49,16 @@ export function ServicosList() {
     }
     carregar()
   }, [pavimentoId])
+
+  function handleAnotacaoGeralChange(texto: string) {
+    setAnotacaoGeral(texto)
+    if (!pavimento) return
+    setSalvo(false)
+    if (anotacaoTimer.current) clearTimeout(anotacaoTimer.current)
+    anotacaoTimer.current = setTimeout(() => {
+      atualizarAnotacaoGeral(pavimento.id, texto).then(() => setSalvo(true))
+    }, 500)
+  }
 
   const filtrados = filtro === 'todos' ? servicos : servicos.filter((s) => s.statusNormalizado === filtro)
 
@@ -68,6 +87,20 @@ export function ServicosList() {
       </div>
 
       <main className="flex-1 space-y-3 p-4 pb-10">
+        <Card>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-brand-dark">Anotações gerais do pavimento</h2>
+            <span className="text-xs text-gray-400">{salvo ? 'Salvo' : 'Salvando…'}</span>
+          </div>
+          <textarea
+            value={anotacaoGeral}
+            onChange={(e) => handleAnotacaoGeralChange(e.target.value)}
+            placeholder="Observações sobre o pavimento como um todo, não ligadas a um serviço específico…"
+            rows={3}
+            className="mt-2 w-full rounded-xl border-2 border-gray-300 p-3 text-base leading-relaxed"
+          />
+        </Card>
+
         {filtrados.length === 0 && (
           <EmptyState title="Nenhum serviço nesse filtro" />
         )}

@@ -61,6 +61,7 @@ export async function criarVisitaComPavimentos(
       visitaId,
       nome: pav.nome,
       ordem: ordemPavimento++,
+      anotacaoGeral: '',
     })
     let ordemServico = 0
     for (const s of pav.servicos) {
@@ -101,6 +102,10 @@ export async function getServico(servicoId: number): Promise<Servico | undefined
 
 export async function getPavimento(pavimentoId: number): Promise<Pavimento | undefined> {
   return db.pavimentos.get(pavimentoId)
+}
+
+export async function atualizarAnotacaoGeral(pavimentoId: number, texto: string): Promise<void> {
+  await db.pavimentos.update(pavimentoId, { anotacaoGeral: texto })
 }
 
 export async function getOuCriarRegistro(servicoId: number): Promise<Registro> {

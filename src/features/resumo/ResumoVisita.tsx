@@ -94,7 +94,7 @@ export function ResumoVisita() {
           )
         : p.servicos,
     }))
-    .filter((p) => p.servicos.length > 0)
+    .filter((p) => p.servicos.length > 0 || p.anotacaoGeral?.trim())
 
   return (
     <div className="flex min-h-svh flex-col bg-gray-50">
@@ -121,6 +121,12 @@ export function ResumoVisita() {
         {pavimentosFiltrados.map((p) => (
           <div key={p.id}>
             <h2 className="mb-2 text-xl font-bold text-brand-dark">{p.nome}</h2>
+            {p.anotacaoGeral?.trim() && (
+              <Card className="mb-3 bg-brand/5">
+                <p className="text-sm font-semibold text-gray-500">Anotações gerais</p>
+                <p className="mt-1 text-base text-gray-700">{p.anotacaoGeral}</p>
+              </Card>
+            )}
             <div className="space-y-3">
               {p.servicos.map((s) => (
                 <ServicoResumo key={s.id} servico={s} />
