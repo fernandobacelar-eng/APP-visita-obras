@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { TopBar } from '../../components/TopBar'
 import { Card } from '../../components/Card'
-import { StatusBadge } from '../../components/StatusBadge'
 import {
   getServico,
   getPavimento,
   getOuCriarRegistro,
   atualizarRegistro,
+  atualizarStatusServico,
   getFotos,
   adicionarFoto,
   removerFoto,
@@ -15,11 +15,20 @@ import {
   adicionarAudio,
   removerAudio,
 } from '../../db/repository'
-import type { Servico, Pavimento, Registro, Foto, Audio as AudioRegistro, StatusTranscricao } from '../../types'
+import type {
+  Servico,
+  Pavimento,
+  Registro,
+  Foto,
+  Audio as AudioRegistro,
+  StatusTranscricao,
+  StatusServico,
+} from '../../types'
 import { FotoCapture } from './FotoCapture'
 import { AnotacaoTexto } from './AnotacaoTexto'
 import { AnotacaoVoz } from './AnotacaoVoz'
 import { QdpPlaceholder } from './QdpPlaceholder'
+import { StatusSelector } from './StatusSelector'
 
 export function RegistroServico() {
   const { servicoId } = useParams<{ servicoId: string }>()
@@ -99,6 +108,12 @@ export function RegistroServico() {
     if (registro?.id) setAudios(await getAudios(registro.id))
   }
 
+  async function handleStatusChange(novoStatus: StatusServico) {
+    if (!servico) return
+    setServico({ ...servico, statusNormalizado: novoStatus })
+    await atualizarStatusServico(servico.id, novoStatus)
+  }
+
   if (!servico || !registro) return null
 
   return (
@@ -106,14 +121,18 @@ export function RegistroServico() {
       <TopBar title={servico.nome} subtitle={pavimento?.nome} onBack />
 
       <main className="flex-1 space-y-4 p-4 pb-10">
-        <div className="flex items-center justify-between">
-          <StatusBadge status={servico.statusNormalizado} />
+        <div className="flex justify-end">
           <span className="text-xs text-gray-400">{salvo ? 'Salvo' : 'Salvando…'}</span>
         </div>
 
         {servico.observacaoImportada && (
           <p className="text-sm text-gray-500">{servico.observacaoImportada}</p>
         )}
+
+        <Card>
+          <h2 className="mb-3 text-lg font-bold text-brand-dark">Status</h2>
+          <StatusSelector status={servico.statusNormalizado} onChange={handleStatusChange} />
+        </Card>
 
         <Card>
           <h2 className="mb-3 text-lg font-bold text-brand-dark">Fotos</h2>

@@ -6,7 +6,6 @@ import { Card } from '../../components/Card'
 import { getVisitaAtiva, criarVisitaComPavimentos } from '../../db/repository'
 import type { Visita } from '../../types'
 import { parseExcelFile, ExcelParseError, type ParseResult } from './excelParser'
-import { montarUrlDownloadDrive } from './driveLink'
 
 export function ImportScreen() {
   const navigate = useNavigate()
@@ -18,8 +17,6 @@ export function ImportScreen() {
   const [parseResult, setParseResult] = useState<ParseResult | null>(null)
   const [obraNome, setObraNome] = useState('')
   const [iniciando, setIniciando] = useState(false)
-  const [driveLink, setDriveLink] = useState('')
-  const [driveErro, setDriveErro] = useState<string | null>(null)
 
   useEffect(() => {
     getVisitaAtiva().then((v) => setVisitaAtiva(v ?? null))
@@ -41,16 +38,6 @@ export function ImportScreen() {
       setCarregando(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
-  }
-
-  function handleAbrirDrive() {
-    const url = montarUrlDownloadDrive(driveLink)
-    if (!url) {
-      setDriveErro('Não reconheci esse link do Drive. Cole o link de compartilhamento completo.')
-      return
-    }
-    setDriveErro(null)
-    window.open(url, '_blank', 'noopener')
   }
 
   async function handleIniciarVisita() {
@@ -83,32 +70,6 @@ export function ImportScreen() {
             </Button>
           </Card>
         )}
-
-        <Card>
-          <h2 className="text-lg font-bold text-brand-dark">Planilha está no Google Drive?</h2>
-          <p className="mt-1 text-base text-gray-600">
-            Cole o link de compartilhamento (arquivo precisa estar como "Qualquer pessoa com o
-            link"). Vai abrir numa nova aba e baixar — depois é só selecionar o arquivo baixado
-            abaixo.
-          </p>
-          <div className="mt-3 flex flex-col gap-3">
-            <input
-              value={driveLink}
-              onChange={(e) => setDriveLink(e.target.value)}
-              className="w-full rounded-xl border-2 border-gray-300 p-3 text-base"
-              placeholder="Cole aqui o link do Drive"
-              inputMode="url"
-            />
-            <Button variant="secondary" fullWidth onClick={handleAbrirDrive} disabled={!driveLink.trim()}>
-              🔗 Abrir/baixar do Drive
-            </Button>
-          </div>
-          {driveErro && (
-            <p className="mt-3 rounded-lg bg-status-pendencia/10 p-3 text-base text-status-pendencia">
-              {driveErro}
-            </p>
-          )}
-        </Card>
 
         <Card>
           <h2 className="text-lg font-bold text-brand-dark">

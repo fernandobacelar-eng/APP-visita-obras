@@ -113,6 +113,13 @@ export async function getServico(servicoId: number): Promise<Servico | undefined
   return db.servicos.get(servicoId)
 }
 
+export async function atualizarStatusServico(
+  servicoId: number,
+  statusNormalizado: Servico['statusNormalizado']
+): Promise<void> {
+  await db.servicos.update(servicoId, { statusNormalizado })
+}
+
 export async function getPavimento(pavimentoId: number): Promise<Pavimento | undefined> {
   return db.pavimentos.get(pavimentoId)
 }
