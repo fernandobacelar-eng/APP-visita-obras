@@ -24,16 +24,24 @@ instalar.
 
 ## Formato da planilha de importação
 
-O app espera um `.xlsx` com colunas `Pavimento`, `Serviço`, `Status` e `Observação`
-(opcional) — use o botão "Baixar modelo de planilha" na tela inicial para gerar um
-exemplo já no formato certo. Status reconhecidos automaticamente (o texto da célula é
-comparado por palavras-chave, sem diferenciar maiúsculas/acentos): "Concluído",
-"Em execução", "Pendência"/"Rabo", "Não iniciado" — qualquer outro texto aparece como
-badge "Outro".
+O app lê o painel de curva física da obra direto no formato que a ferramenta de
+planejamento já exporta (`.xlsx`), sem precisar de um template à parte:
 
-Planilhas em formato de painel/matriz colorido (uma coluna por serviço, com o status
-codificado por cor de célula) não são suportadas diretamente — é preciso transpor os
-dados para o formato tabular acima antes de importar.
+- **Coluna B** (a partir da linha 4): nome/cota de cada pavimento (ex: `3000`, `COBERTA`).
+- **Linha 3** (a partir da coluna C): nome de cada serviço, um por coluna.
+- Uma célula **sem preenchimento** e sem texto = esse serviço não se aplica àquele
+  pavimento (não entra no app).
+- Uma célula **preenchida** (qualquer cor — a cor em si não importa) representa o serviço
+  naquele pavimento. Dentro de cada coluna:
+  - texto **"EXECUÇÃO"** → esse é o pavimento onde a frente de execução está agora;
+  - texto **"RABO"** → pendência/retrabalho nesse pavimento;
+  - célula preenchida sem texto especial → `concluído` se estiver abaixo da frente
+    "EXECUÇÃO" da coluna (pavimento mais baixo, já construído) ou `não iniciado` se estiver
+    acima; se a coluna não tiver nenhuma célula "EXECUÇÃO", todas as células preenchidas
+    contam como `concluído` (serviço já passou por ali por completo).
+
+Isso assume que a planilha lista os pavimentos do mais alto (topo) para o mais baixo/térreo
+(base), como no arquivo usado para validar o parser.
 
 ## Como os dados são guardados
 

@@ -6,7 +6,6 @@ import { Card } from '../../components/Card'
 import { getVisitaAtiva, criarVisitaComPavimentos } from '../../db/repository'
 import type { Visita } from '../../types'
 import { parseExcelFile, ExcelParseError, type ParseResult } from './excelParser'
-import { baixarModeloPlanilha } from './templateDownload'
 
 export function ImportScreen() {
   const navigate = useNavigate()
@@ -74,7 +73,8 @@ export function ImportScreen() {
             {visitaAtiva ? 'Importar nova planilha' : 'Comece importando a planilha da obra'}
           </h2>
           <p className="mt-1 text-base text-gray-600">
-            Selecione um arquivo .xlsx com as colunas Pavimento, Serviço e Status.
+            Selecione o painel de curva física da obra (.xlsx): pavimentos na coluna B,
+            serviços na linha 3, com "EXECUÇÃO"/"RABO" marcando a frente de cada serviço.
           </p>
 
           {visitaAtiva && !parseResult && (
@@ -100,9 +100,6 @@ export function ImportScreen() {
               onClick={() => fileInputRef.current?.click()}
             >
               {carregando ? 'Lendo planilha…' : '📄 Selecionar planilha (.xlsx)'}
-            </Button>
-            <Button variant="ghost" fullWidth onClick={baixarModeloPlanilha}>
-              ⬇ Baixar modelo de planilha
             </Button>
           </div>
 

@@ -1,12 +1,11 @@
 import * as XLSX from 'xlsx'
-import { normalizarStatus } from '../../lib/status'
 import type { ImportPreview, StatusServico } from '../../types'
 
 export interface ParsedServico {
   nome: string
+  /** Texto bruto da célula ("EXECUÇÃO", "RABO" ou vazio) */
   status: string
   statusNormalizado: StatusServico
-  observacao?: string
 }
 
 export interface ParsedPavimento {
@@ -19,14 +18,10 @@ export interface ParseResult {
   preview: ImportPreview
 }
 
-type Campo = 'pavimento' | 'servico' | 'status' | 'observacao'
+export class ExcelParseError extends Error {}
 
-const ALIASES: Record<Campo, string[]> = {
-  pavimento: ['pavimento', 'andar', 'nivel', 'piso'],
-  servico: ['servico', 'atividade', 'tarefa'],
-  status: ['status', 'situacao'],
-  observacao: ['observacao', 'obs', 'nota', 'anotacao'],
-}
+const COL_PAVIMENTO = 1 // coluna B (0-indexed)
+const COL_SERVICO_INICIO = 2 // coluna C
 
 function normalizarTexto(valor: unknown): string {
   return String(valor ?? '')
@@ -36,90 +31,125 @@ function normalizarTexto(valor: unknown): string {
     .toLowerCase()
 }
 
-function encontrarColunas(header: unknown[]): Partial<Record<Campo, number>> {
-  const resultado: Partial<Record<Campo, number>> = {}
-  header.forEach((cell, idx) => {
-    const texto = normalizarTexto(cell)
-    if (!texto) return
-    for (const campo of Object.keys(ALIASES) as Campo[]) {
-      if (resultado[campo] != null) continue
-      if (ALIASES[campo].some((alias) => texto === alias || texto.startsWith(alias))) {
-        resultado[campo] = idx
-      }
-    }
-  })
-  return resultado
+function textoCelula(cell: XLSX.CellObject | undefined): string {
+  if (!cell || cell.v == null) return ''
+  return String(cell.v).trim()
 }
 
-export class ExcelParseError extends Error {}
+function celulaPreenchida(cell: XLSX.CellObject | undefined): boolean {
+  const pattern = (cell as { s?: { patternType?: string } } | undefined)?.s?.patternType
+  return !!pattern && pattern !== 'none'
+}
 
+/**
+ * Painel de curva física: cada coluna (a partir de C, cabeçalho na linha 3) é um serviço,
+ * cada linha (coluna B) é um pavimento. Uma célula sem preenchimento e sem texto significa
+ * que o serviço não se aplica àquele pavimento. Dentro de cada coluna, a célula com o texto
+ * "EXECUÇÃO" marca a frente de execução atual; "RABO" marca pendência; as demais células
+ * preenchidas são deduzidas pela posição em relação à frente (pavimentos mais baixos que já
+ * foram alcançados = concluído, mais altos = não iniciado). Sem nenhuma "EXECUÇÃO" na coluna,
+ * as células preenchidas contam como concluídas (serviço já passou por ali por completo).
+ */
 export async function parseExcelFile(file: File): Promise<ParseResult> {
   const buffer = await file.arrayBuffer()
-  const workbook = XLSX.read(buffer, { type: 'array' })
+  const workbook = XLSX.read(buffer, { type: 'array', cellStyles: true })
   const sheetName = workbook.SheetNames[0]
   if (!sheetName) {
     throw new ExcelParseError('A planilha está vazia.')
   }
   const sheet = workbook.Sheets[sheetName]
-  const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    blankrows: false,
-    defval: '',
-  })
+  const ref = sheet['!ref']
+  if (!ref) {
+    throw new ExcelParseError('A planilha está vazia.')
+  }
+  const range = XLSX.utils.decode_range(ref)
 
-  let headerIdx = -1
-  let colunas: Partial<Record<Campo, number>> = {}
-  for (let i = 0; i < Math.min(rows.length, 10); i++) {
-    const encontradas = encontrarColunas(rows[i])
-    if (encontradas.pavimento != null && encontradas.servico != null && encontradas.status != null) {
-      headerIdx = i
-      colunas = encontradas
+  let headerRow = -1
+  for (let r = range.s.r; r <= Math.min(range.s.r + 10, range.e.r); r++) {
+    let count = 0
+    for (let c = COL_SERVICO_INICIO; c <= range.e.c; c++) {
+      if (textoCelula(sheet[XLSX.utils.encode_cell({ r, c })])) count++
+    }
+    if (count >= 2) {
+      headerRow = r
       break
     }
   }
-
-  if (headerIdx === -1) {
+  if (headerRow === -1) {
     throw new ExcelParseError(
-      'Não encontrei as colunas "Pavimento", "Serviço" e "Status" na planilha. Baixe o modelo e preencha nesse formato.'
+      'Não encontrei a linha com os nomes dos serviços (esperada a partir da coluna C). Confira se é o arquivo certo.'
     )
   }
 
-  const avisos: string[] = []
-  const pavimentosMap = new Map<string, ParsedPavimento>()
-
-  for (let i = headerIdx + 1; i < rows.length; i++) {
-    const row = rows[i]
-    const pavimentoNome = String(row[colunas.pavimento!] ?? '').trim()
-    const servicoNome = String(row[colunas.servico!] ?? '').trim()
-    const statusBruto = String(row[colunas.status!] ?? '').trim()
-    const observacao = colunas.observacao != null ? String(row[colunas.observacao] ?? '').trim() : undefined
-
-    if (!pavimentoNome && !servicoNome) continue
-    if (!pavimentoNome || !servicoNome) {
-      avisos.push(`Linha ${i + 1}: pavimento ou serviço em branco — ignorada.`)
-      continue
+  const colunasServico: { col: number; nome: string }[] = []
+  for (let c = COL_SERVICO_INICIO; c <= range.e.c; c++) {
+    const texto = textoCelula(sheet[XLSX.utils.encode_cell({ r: headerRow, c })])
+    if (texto) {
+      colunasServico.push({ col: c, nome: texto.replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ').trim() })
     }
-
-    if (!pavimentosMap.has(pavimentoNome)) {
-      pavimentosMap.set(pavimentoNome, { nome: pavimentoNome, servicos: [] })
-    }
-    pavimentosMap.get(pavimentoNome)!.servicos.push({
-      nome: servicoNome,
-      status: statusBruto,
-      statusNormalizado: normalizarStatus(statusBruto),
-      observacao: observacao || undefined,
-    })
+  }
+  if (colunasServico.length === 0) {
+    throw new ExcelParseError('Não encontrei serviços na linha de cabeçalho. Confira se é o arquivo certo.')
   }
 
-  const pavimentos = Array.from(pavimentosMap.values())
+  const linhasPavimento: { row: number; nome: string }[] = []
+  for (let r = headerRow + 1; r <= range.e.r; r++) {
+    const texto = textoCelula(sheet[XLSX.utils.encode_cell({ r, c: COL_PAVIMENTO })])
+    if (!texto) break
+    linhasPavimento.push({ row: r, nome: texto })
+  }
+  if (linhasPavimento.length === 0) {
+    throw new ExcelParseError('Não encontrei pavimentos na coluna B da planilha. Confira se é o arquivo certo.')
+  }
+
+  const grid = colunasServico.map(({ col }) =>
+    linhasPavimento.map(({ row }) => {
+      const cell = sheet[XLSX.utils.encode_cell({ r: row, c: col })]
+      const texto = textoCelula(cell)
+      return { aplicavel: celulaPreenchida(cell) || !!texto, texto }
+    })
+  )
+
+  const statusPorColuna: StatusServico[][] = grid.map((linhas) => {
+    const execRanks: number[] = []
+    linhas.forEach((info, idx) => {
+      if (normalizarTexto(info.texto).includes('execu')) execRanks.push(idx)
+    })
+    const frenteRank = execRanks.length ? Math.min(...execRanks) : null
+
+    return linhas.map((info, idx): StatusServico => {
+      const t = normalizarTexto(info.texto)
+      if (t.includes('execu')) return 'em_execucao'
+      if (t === 'rabo') return 'pendencia'
+      if (frenteRank === null) return 'concluido'
+      return idx < frenteRank ? 'nao_iniciado' : 'concluido'
+    })
+  })
+
+  const pavimentos: ParsedPavimento[] = linhasPavimento
+    .map((p, rowIdx) => {
+      const servicos: ParsedServico[] = []
+      colunasServico.forEach((s, colIdx) => {
+        const info = grid[colIdx][rowIdx]
+        if (!info.aplicavel) return
+        servicos.push({
+          nome: s.nome,
+          status: info.texto,
+          statusNormalizado: statusPorColuna[colIdx][rowIdx],
+        })
+      })
+      return { nome: p.nome, servicos }
+    })
+    .filter((p) => p.servicos.length > 0)
+
   if (pavimentos.length === 0) {
-    throw new ExcelParseError('Nenhuma linha válida encontrada na planilha.')
+    throw new ExcelParseError('Nenhum serviço aplicável foi encontrado nos pavimentos. Confira se é o arquivo certo.')
   }
 
   const preview: ImportPreview = {
     pavimentos: pavimentos.map((p) => ({ nome: p.nome, servicos: p.servicos.length })),
     totalServicos: pavimentos.reduce((acc, p) => acc + p.servicos.length, 0),
-    avisos,
+    avisos: [],
   }
 
   return { pavimentos, preview }
