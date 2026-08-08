@@ -4,12 +4,13 @@ import { TopBar } from '../../components/TopBar'
 import { Card } from '../../components/Card'
 import { EmptyState } from '../../components/EmptyState'
 import { Button } from '../../components/Button'
-import { getVisitaAtiva, getPavimentos, contarRegistrosDoPavimento } from '../../db/repository'
+import { getVisitaAtiva, getPavimentos, contarRegistrosDoPavimento, getServicosEmExecucao } from '../../db/repository'
 import type { Visita, Pavimento } from '../../types'
 
 interface LinhaPavimento extends Pavimento {
   total: number
   comRegistro: number
+  emExecucao: string[]
 }
 
 export function PavimentosList() {
@@ -28,8 +29,11 @@ export function PavimentosList() {
       const pavs = await getPavimentos(v.id)
       const comContagem = await Promise.all(
         pavs.map(async (p) => {
-          const { total, comRegistro } = await contarRegistrosDoPavimento(p.id)
-          return { ...p, total, comRegistro }
+          const [{ total, comRegistro }, emExecucao] = await Promise.all([
+            contarRegistrosDoPavimento(p.id),
+            getServicosEmExecucao(p.id),
+          ])
+          return { ...p, total, comRegistro, emExecucao }
         })
       )
       setLinhas(comContagem)
@@ -74,9 +78,13 @@ export function PavimentosList() {
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-xl font-bold text-brand-dark">{p.nome}</p>
-                <p className="text-base text-gray-500">
-                  {p.comRegistro} de {p.total} serviço(s) registrados
-                </p>
+                {p.emExecucao.length > 0 ? (
+                  <p className="truncate text-base text-status-em-execucao">
+                    Em execução: {p.emExecucao.join(', ')}
+                  </p>
+                ) : (
+                  <p className="text-base text-gray-400">Nenhum serviço em execução</p>
+                )}
               </div>
               <span className="text-2xl text-gray-300">›</span>
             </div>

@@ -86,6 +86,15 @@ export async function getServicosDoPavimento(pavimentoId: number): Promise<Servi
   return db.servicos.where('pavimentoId').equals(pavimentoId).sortBy('ordem')
 }
 
+export async function getServicosEmExecucao(pavimentoId: number): Promise<string[]> {
+  const servicos = await db.servicos
+    .where('pavimentoId')
+    .equals(pavimentoId)
+    .and((s) => s.statusNormalizado === 'em_execucao')
+    .sortBy('ordem')
+  return servicos.map((s) => s.nome)
+}
+
 export async function getServico(servicoId: number): Promise<Servico | undefined> {
   return db.servicos.get(servicoId)
 }
