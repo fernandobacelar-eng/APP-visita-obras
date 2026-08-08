@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --color-brand: #0f4c3a;
+  --color-brand-dark: #0a3327;
+  --color-accent: #ffb020;
+  --color-accent-dark: #cc8b13;
+
+  --color-status-nao-iniciado: #6b7280;
+  --color-status-em-execucao: #eab308;
+  --color-status-concluido: #16a34a;
+  --color-status-pendencia: #dc2626;
+}
+
+html {
+  /* Larger base size for outdoor / one-hand legibility */
+  font-size: 18px;
+}
+
+body {
+  margin: 0;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  color-scheme: light;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+/* Respect safe areas on notched Android devices when installed standalone */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
