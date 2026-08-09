@@ -44,7 +44,7 @@ function CabecalhoRelatorio({ visita }: { visita: Visita }) {
     <div className="rounded-2xl border border-gray-200 bg-white p-5 print:rounded-none print:border-0 print:border-b-2 print:border-brand print:p-0 print:pb-4">
       <div className="flex items-start justify-between gap-4">
         <img src={logoBtb} alt="BTB Engenharia" className="h-10 w-auto shrink-0 object-contain" />
-        <img src={bannerPredio} alt={visita.obraNome} className="h-8 w-auto shrink-0 rounded object-cover" />
+        <img src={bannerPredio} alt={visita.obraNome} className="h-[38px] w-auto shrink-0 rounded object-cover" />
       </div>
       <div className="mt-3">
         <p className="text-xl font-bold text-brand-dark">{visita.obraNome}</p>
