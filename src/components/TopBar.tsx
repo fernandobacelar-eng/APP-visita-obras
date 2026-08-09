@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import logoBtb from '../assets/btb-logo.png'
 
 export function TopBar({
   title,
@@ -33,7 +34,9 @@ export function TopBar({
           ←
         </button>
       )}
-      <span className="shrink-0 text-lg font-extrabold tracking-tight text-white">BTB</span>
+      <span className="flex shrink-0 items-center rounded-lg bg-white px-2 py-1">
+        <img src={logoBtb} alt="BTB Engenharia" className="h-8 w-auto object-contain" />
+      </span>
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-xl font-bold leading-tight">{title}</h1>
         {subtitle && <p className="truncate text-sm text-white/80">{subtitle}</p>}

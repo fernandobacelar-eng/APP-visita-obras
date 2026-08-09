@@ -77,8 +77,6 @@ export function ImportScreen() {
     <div className="flex min-h-svh flex-col bg-gray-50">
       <TopBar title="Visita à Obra" subtitle={OBRA_NOME} />
       <main className="flex-1 space-y-4 p-4 pb-10">
-        <p className="text-center text-2xl font-extrabold tracking-tight text-brand-dark">BTB</p>
-
         {visitaAtiva && (
           <Card className="border-accent bg-accent/10">
             <p className="font-semibold text-brand-dark">
