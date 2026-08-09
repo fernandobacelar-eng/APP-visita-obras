@@ -10,6 +10,7 @@ import type { Foto, Visita } from '../../types'
 import { useObjectUrl } from '../../hooks/useObjectUrl'
 import { STATUS_LABEL } from '../../lib/status'
 import logoBtb from '../../assets/btb-logo.png'
+import bannerPredio from '../../assets/villa-lobos-banner.jpg'
 
 function FotoRelatorio({ foto }: { foto: Foto }) {
   const url = useObjectUrl(foto.blob)
@@ -40,12 +41,15 @@ function CabecalhoRelatorio({ visita }: { visita: Visita }) {
     year: 'numeric',
   })
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-5 print:rounded-none print:border-0 print:border-b-2 print:border-brand print:p-0 print:pb-4">
-      <img src={logoBtb} alt="BTB Engenharia" className="h-14 w-auto shrink-0 object-contain" />
-      <div className="h-12 w-px shrink-0 bg-gray-300" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xl font-bold text-brand-dark">{visita.obraNome}</p>
-        <p className="text-base text-gray-600">Vistoria em {dataVistoria}</p>
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white print:rounded-none print:border-0">
+      <img src={bannerPredio} alt={visita.obraNome} className="h-auto w-full" />
+      <div className="flex items-center gap-4 border-t border-gray-200 p-5 print:border-t-2 print:border-brand print:px-0 print:pb-0">
+        <img src={logoBtb} alt="BTB Engenharia" className="h-14 w-auto shrink-0 object-contain" />
+        <div className="h-12 w-px shrink-0 bg-gray-300" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xl font-bold text-brand-dark">{visita.obraNome}</p>
+          <p className="text-base text-gray-600">Vistoria em {dataVistoria}</p>
+        </div>
       </div>
     </div>
   )

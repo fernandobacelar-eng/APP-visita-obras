@@ -5,6 +5,7 @@ import { Button } from '../../components/Button'
 import { Card } from '../../components/Card'
 import { getVisitaAtiva, criarVisitaComPavimentos } from '../../db/repository'
 import type { Visita } from '../../types'
+import bannerPredio from '../../assets/villa-lobos-banner.jpg'
 import { parseExcelFile, ExcelParseError, type ParseResult } from './excelParser'
 import {
   buscarArquivoDrive,
@@ -77,6 +78,8 @@ export function ImportScreen() {
     <div className="flex min-h-svh flex-col bg-gray-50">
       <TopBar title="Visita à Obra" subtitle={OBRA_NOME} />
       <main className="flex-1 space-y-4 p-4 pb-10">
+        <img src={bannerPredio} alt={OBRA_NOME} className="w-full rounded-2xl object-cover shadow-sm" />
+
         {visitaAtiva && (
           <Card className="border-accent bg-accent/10">
             <p className="font-semibold text-brand-dark">
