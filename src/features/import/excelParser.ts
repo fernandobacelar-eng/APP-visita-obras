@@ -43,12 +43,14 @@ function celulaPreenchida(cell: XLSX.CellObject | undefined): boolean {
 
 /**
  * Painel de curva física: cada coluna (a partir de C, cabeçalho na linha 3) é um serviço,
- * cada linha (coluna B) é um pavimento. Uma célula sem preenchimento e sem texto significa
- * que o serviço não se aplica àquele pavimento. Dentro de cada coluna, a célula com o texto
- * "EXECUÇÃO" marca a frente de execução atual; "RABO" marca pendência; qualquer outra célula
- * preenchida já foi alcançada por essa frente (concluída). A posição da linha não é usada pra
- * decidir status: cada serviço avança numa direção diferente pela torre (uns de baixo pra
- * cima, outros do topo pro térreo), então só o preenchimento em si é um sinal confiável.
+ * cada linha (coluna B) é um pavimento. Todo pavimento nomeado na coluna B e todo serviço
+ * nomeado na linha 3 entram no app, mesmo que ainda não tenha nenhuma marcação — uma célula
+ * sem preenchimento e sem texto quer dizer "ainda não começou", não "nunca vai acontecer".
+ * Dentro de cada coluna, a célula com o texto "EXECUÇÃO" marca a frente de execução atual;
+ * "RABO" marca pendência; qualquer outra célula preenchida já foi alcançada por essa frente
+ * (concluída). A posição da linha não é usada pra decidir status: cada serviço avança numa
+ * direção diferente pela torre (uns de baixo pra cima, outros do topo pro térreo), então só
+ * o preenchimento em si é um sinal confiável.
  */
 export async function parseExcelFile(file: File): Promise<ParseResult> {
   const buffer = await file.arrayBuffer()
@@ -115,35 +117,31 @@ export async function parseExcelFile(file: File): Promise<ParseResult> {
   // então a posição relativa à célula "EXECUÇÃO" não é um sinal confiável de
   // status. O sinal confiável é o próprio preenchimento: se alguém coloriu a
   // célula (sem ser a frente ou uma pendência), aquele pavimento já foi
-  // alcançado por essa frente de serviço.
+  // alcançado por essa frente de serviço. Uma célula sem preenchimento e sem
+  // texto significa que esse serviço ainda não começou ali (não que ele não
+  // vá acontecer) — por isso todo pavimento da coluna B e todo serviço da
+  // linha 3 sempre entram no app, mesmo sem nenhuma marcação ainda.
   const statusPorColuna: StatusServico[][] = grid.map((linhas) =>
     linhas.map((info): StatusServico => {
       const t = normalizarTexto(info.texto)
       if (t.includes('execu')) return 'em_execucao'
       if (t === 'rabo') return 'pendencia'
+      if (!info.aplicavel) return 'nao_iniciado'
       return 'concluido'
     })
   )
 
-  const pavimentos: ParsedPavimento[] = linhasPavimento
-    .map((p, rowIdx) => {
-      const servicos: ParsedServico[] = []
-      colunasServico.forEach((s, colIdx) => {
-        const info = grid[colIdx][rowIdx]
-        if (!info.aplicavel) return
-        servicos.push({
-          nome: s.nome,
-          status: info.texto,
-          statusNormalizado: statusPorColuna[colIdx][rowIdx],
-        })
-      })
-      return { nome: p.nome, servicos }
+  const pavimentos: ParsedPavimento[] = linhasPavimento.map((p, rowIdx) => {
+    const servicos: ParsedServico[] = colunasServico.map((s, colIdx) => {
+      const info = grid[colIdx][rowIdx]
+      return {
+        nome: s.nome,
+        status: info.texto,
+        statusNormalizado: statusPorColuna[colIdx][rowIdx],
+      }
     })
-    .filter((p) => p.servicos.length > 0)
-
-  if (pavimentos.length === 0) {
-    throw new ExcelParseError('Nenhum serviço aplicável foi encontrado nos pavimentos. Confira se é o arquivo certo.')
-  }
+    return { nome: p.nome, servicos }
+  })
 
   const preview: ImportPreview = {
     pavimentos: pavimentos.map((p) => ({ nome: p.nome, servicos: p.servicos.length })),
