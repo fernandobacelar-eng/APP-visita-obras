@@ -15,6 +15,13 @@ import {
   salvarDriveLink,
 } from './driveApi'
 
+// Valores padrão embutidos no build (via .env.local, não versionado) para
+// que o app já funcione sem nenhuma configuração para quem abrir o link —
+// um ajuste manual nos campos abaixo sobrescreve isso e fica salvo só
+// naquele aparelho.
+const DEFAULT_DRIVE_API_KEY = import.meta.env.VITE_DRIVE_API_KEY ?? ''
+const DEFAULT_DRIVE_LINK = import.meta.env.VITE_DRIVE_LINK ?? ''
+
 export function ImportScreen() {
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -33,8 +40,8 @@ export function ImportScreen() {
 
   useEffect(() => {
     getVisitaAtiva().then((v) => setVisitaAtiva(v ?? null))
-    const chaveSalva = getDriveApiKeySalva()
-    const linkSalvo = getDriveLinkSalvo()
+    const chaveSalva = getDriveApiKeySalva() || DEFAULT_DRIVE_API_KEY
+    const linkSalvo = getDriveLinkSalvo() || DEFAULT_DRIVE_LINK
     setDriveApiKey(chaveSalva)
     setDriveLink(linkSalvo)
     // Já tem chave e link salvos de uma vez anterior: busca sozinho, sem
@@ -122,9 +129,9 @@ export function ImportScreen() {
         <Card>
           <h2 className="text-lg font-bold text-brand-dark">Importar automaticamente do Drive</h2>
           <p className="mt-1 text-base text-gray-600">
-            Preencha uma vez — fica salvo neste aparelho. Nas próximas vezes, com internet, o
-            app já busca sozinho assim que você abrir esta tela (arquivo precisa continuar
-            compartilhado como "Qualquer pessoa com o link").
+            Já vem configurado — com internet, busca sozinho assim que você abrir esta tela.
+            Só mexa nos campos abaixo se quiser apontar para outra planilha (fica salvo apenas
+            neste aparelho).
           </p>
 
           <label className="mt-3 block text-sm font-semibold text-gray-600">Chave de API do Google</label>
