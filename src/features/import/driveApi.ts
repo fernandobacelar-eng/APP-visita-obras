@@ -1,28 +1,18 @@
 export class DriveApiError extends Error {}
 
-const CHAVE_STORAGE = 'visita-obra:drive-api-key'
-const LINK_STORAGE = 'visita-obra:drive-link'
+const ULTIMA_ATUALIZACAO_STORAGE = 'visita-obra:drive-ultima-atualizacao'
 
-export function getDriveApiKeySalva(): string {
-  return localStorage.getItem(CHAVE_STORAGE) ?? ''
+export function getUltimaAtualizacaoSalva(): string | null {
+  return localStorage.getItem(ULTIMA_ATUALIZACAO_STORAGE)
 }
 
-export function salvarDriveApiKey(valor: string): void {
-  localStorage.setItem(CHAVE_STORAGE, valor)
-}
-
-export function getDriveLinkSalvo(): string {
-  return localStorage.getItem(LINK_STORAGE) ?? ''
-}
-
-export function salvarDriveLink(valor: string): void {
-  localStorage.setItem(LINK_STORAGE, valor)
+export function salvarUltimaAtualizacao(iso: string): void {
+  localStorage.setItem(ULTIMA_ATUALIZACAO_STORAGE, iso)
 }
 
 /**
- * Extrai o ID do arquivo a partir de um link do Google Drive/Sheets colado
- * pelo usuário, em qualquer um dos formatos comuns de compartilhamento (ou
- * já o próprio ID, se for isso que foi colado).
+ * Extrai o ID do arquivo a partir de um link do Google Drive/Sheets (em
+ * qualquer um dos formatos comuns de compartilhamento, ou já o próprio ID).
  */
 function extrairIdDrive(link: string): string | null {
   const texto = link.trim()
@@ -37,18 +27,17 @@ function extrairIdDrive(link: string): string | null {
 /**
  * Busca o conteúdo de um arquivo público do Drive ("Qualquer pessoa com o
  * link") via Drive API v3 + chave de API (sem login/OAuth) e devolve um
- * File compatível com parseExcelFile, pra reaproveitar o mesmo parser da
- * importação manual.
+ * File compatível com parseExcelFile, pra reaproveitar o mesmo parser.
  */
 export async function buscarArquivoDrive(apiKey: string, linkOuId: string): Promise<File> {
   const chave = apiKey.trim()
   if (!chave) {
-    throw new DriveApiError('Preencha a chave de API do Google antes de buscar.')
+    throw new DriveApiError('Chave de API do Google não configurada.')
   }
 
   const id = extrairIdDrive(linkOuId)
   if (!id) {
-    throw new DriveApiError('Não reconheci esse link/ID do Drive. Cole o link de compartilhamento completo.')
+    throw new DriveApiError('Link/ID do Drive não configurado corretamente.')
   }
 
   const url = `https://www.googleapis.com/drive/v3/files/${id}?alt=media&key=${encodeURIComponent(chave)}`
@@ -63,11 +52,11 @@ export async function buscarArquivoDrive(apiKey: string, linkOuId: string): Prom
   if (!resposta.ok) {
     if (resposta.status === 403) {
       throw new DriveApiError(
-        'Acesso negado pelo Drive (403). Confira se a chave de API está certa, se a Drive API está ativada no seu projeto Google Cloud, e se o arquivo está compartilhado como "Qualquer pessoa com o link".'
+        'Acesso negado pelo Drive (403). Confira se a chave de API continua válida e se o arquivo está compartilhado como "Qualquer pessoa com o link".'
       )
     }
     if (resposta.status === 404) {
-      throw new DriveApiError('Arquivo não encontrado (404). Confira o link/ID colado.')
+      throw new DriveApiError('Arquivo não encontrado (404) no Drive.')
     }
     throw new DriveApiError(`O Drive respondeu com erro (${resposta.status}). Tente novamente.`)
   }
