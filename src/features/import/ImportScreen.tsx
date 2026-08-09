@@ -6,6 +6,14 @@ import { Card } from '../../components/Card'
 import { getVisitaAtiva, criarVisitaComPavimentos } from '../../db/repository'
 import type { Visita } from '../../types'
 import { parseExcelFile, ExcelParseError, type ParseResult } from './excelParser'
+import {
+  buscarArquivoDrive,
+  DriveApiError,
+  getDriveApiKeySalva,
+  salvarDriveApiKey,
+  getDriveLinkSalvo,
+  salvarDriveLink,
+} from './driveApi'
 
 export function ImportScreen() {
   const navigate = useNavigate()
@@ -18,25 +26,53 @@ export function ImportScreen() {
   const [obraNome, setObraNome] = useState('')
   const [iniciando, setIniciando] = useState(false)
 
+  const [driveApiKey, setDriveApiKey] = useState('')
+  const [driveLink, setDriveLink] = useState('')
+  const [driveCarregando, setDriveCarregando] = useState(false)
+  const [driveErro, setDriveErro] = useState<string | null>(null)
+
   useEffect(() => {
     getVisitaAtiva().then((v) => setVisitaAtiva(v ?? null))
+    setDriveApiKey(getDriveApiKeySalva())
+    setDriveLink(getDriveLinkSalvo())
   }, [])
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  async function processarArquivo(file: File) {
     setErro(null)
     setParseResult(null)
-    setCarregando(true)
     try {
       const result = await parseExcelFile(file)
       setParseResult(result)
       setObraNome(file.name.replace(/\.xlsx$/i, ''))
     } catch (err) {
       setErro(err instanceof ExcelParseError ? err.message : 'Não foi possível ler esse arquivo. Confira se é um .xlsx válido.')
+    }
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCarregando(true)
+    try {
+      await processarArquivo(file)
     } finally {
       setCarregando(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  async function handleBuscarDrive() {
+    setDriveErro(null)
+    salvarDriveApiKey(driveApiKey)
+    salvarDriveLink(driveLink)
+    setDriveCarregando(true)
+    try {
+      const file = await buscarArquivoDrive(driveApiKey, driveLink)
+      await processarArquivo(file)
+    } catch (err) {
+      setDriveErro(err instanceof DriveApiError ? err.message : 'Não foi possível buscar o arquivo no Drive.')
+    } finally {
+      setDriveCarregando(false)
     }
   }
 
@@ -72,6 +108,48 @@ export function ImportScreen() {
         )}
 
         <Card>
+          <h2 className="text-lg font-bold text-brand-dark">Importar automaticamente do Drive</h2>
+          <p className="mt-1 text-base text-gray-600">
+            Busca o arquivo direto do Google Drive (precisa estar compartilhado como "Qualquer
+            pessoa com o link"). Preencha uma vez — fica salvo neste aparelho.
+          </p>
+
+          <label className="mt-3 block text-sm font-semibold text-gray-600">Chave de API do Google</label>
+          <input
+            value={driveApiKey}
+            onChange={(e) => setDriveApiKey(e.target.value)}
+            className="mt-1 w-full rounded-xl border-2 border-gray-300 p-3 text-base"
+            placeholder="Cole aqui a chave de API"
+            type="password"
+          />
+
+          <label className="mt-3 block text-sm font-semibold text-gray-600">Link ou ID da planilha no Drive</label>
+          <input
+            value={driveLink}
+            onChange={(e) => setDriveLink(e.target.value)}
+            className="mt-1 w-full rounded-xl border-2 border-gray-300 p-3 text-base"
+            placeholder="Cole aqui o link do Drive"
+            inputMode="url"
+          />
+
+          <Button
+            variant="primary"
+            fullWidth
+            className="mt-4"
+            disabled={driveCarregando || !driveApiKey.trim() || !driveLink.trim()}
+            onClick={handleBuscarDrive}
+          >
+            {driveCarregando ? 'Buscando…' : '☁️ Buscar do Drive'}
+          </Button>
+
+          {driveErro && (
+            <p className="mt-4 rounded-lg bg-status-pendencia/10 p-3 text-base text-status-pendencia">
+              {driveErro}
+            </p>
+          )}
+        </Card>
+
+        <Card>
           <h2 className="text-lg font-bold text-brand-dark">
             {visitaAtiva ? 'Importar nova planilha' : 'Comece importando a planilha da obra'}
           </h2>
@@ -97,7 +175,7 @@ export function ImportScreen() {
               onChange={handleFileChange}
             />
             <Button
-              variant="primary"
+              variant="secondary"
               fullWidth
               disabled={carregando}
               onClick={() => fileInputRef.current?.click()}
