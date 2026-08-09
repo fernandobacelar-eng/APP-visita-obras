@@ -10,13 +10,46 @@ import type { Foto, Visita } from '../../types'
 import { useObjectUrl } from '../../hooks/useObjectUrl'
 import { STATUS_LABEL } from '../../lib/status'
 
-function FotoMini({ foto }: { foto: Foto }) {
+function FotoRelatorio({ foto }: { foto: Foto }) {
   const url = useObjectUrl(foto.blob)
   if (!url) return null
   return (
-    <div className="w-20 shrink-0">
-      <img src={url} alt={foto.legenda || 'Foto'} className="h-20 w-20 rounded-lg object-cover" />
-      {foto.legenda.trim() && <p className="mt-1 text-xs break-words text-gray-600">{foto.legenda}</p>}
+    <div>
+      <img src={url} alt={foto.legenda || 'Foto'} className="w-full h-auto" />
+      {foto.legenda.trim() && <p className="mt-1 text-sm break-words text-gray-600">{foto.legenda}</p>}
+    </div>
+  )
+}
+
+function GradeFotos({ fotos }: { fotos: Foto[] }) {
+  if (fotos.length === 0) return null
+  return (
+    <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 print:grid-cols-2">
+      {fotos.map((f) => (
+        <FotoRelatorio key={f.id} foto={f} />
+      ))}
+    </div>
+  )
+}
+
+function CabecalhoRelatorio({ visita }: { visita: Visita }) {
+  const dataVistoria = new Date(visita.dataVisita).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-5 print:rounded-none print:border-0 print:border-b-2 print:border-brand print:p-0 print:pb-4">
+      {/* Logo BTB Engenharia: assim que o arquivo da marca for enviado, ele entra aqui no lugar do texto. */}
+      <div className="shrink-0 leading-none">
+        <p className="text-3xl font-extrabold tracking-tight text-brand-dark">BTB</p>
+        <p className="text-xs font-semibold tracking-[0.2em] text-brand-dark">ENGENHARIA</p>
+      </div>
+      <div className="h-12 w-px shrink-0 bg-gray-300" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xl font-bold text-brand-dark">{visita.obraNome}</p>
+        <p className="text-base text-gray-600">Vistoria em {dataVistoria}</p>
+      </div>
     </div>
   )
 }
@@ -43,13 +76,7 @@ function AnotacaoGeralResumo({ pavimento }: { pavimento: ResumoPavimento }) {
         </p>
       ))}
 
-      {fotosGerais.length > 0 && (
-        <div className="mt-2 flex gap-3 overflow-x-auto">
-          {fotosGerais.map((f) => (
-            <FotoMini key={f.id} foto={f} />
-          ))}
-        </div>
-      )}
+      <GradeFotos fotos={fotosGerais} />
     </Card>
   )
 }
@@ -90,13 +117,7 @@ function ServicoResumo({ servico }: { servico: ResumoServico }) {
         </p>
       ))}
 
-      {servico.fotos.length > 0 && (
-        <div className="mt-2 flex gap-3 overflow-x-auto">
-          {servico.fotos.map((f) => (
-            <FotoMini key={f.id} foto={f} />
-          ))}
-        </div>
-      )}
+      <GradeFotos fotos={servico.fotos} />
     </Card>
   )
 }
@@ -161,6 +182,8 @@ export function ResumoVisita() {
       <TopBar title="Resumo da visita" subtitle={visita.obraNome} onBack={() => navigate('/pavimentos')} />
 
       <main className="flex-1 space-y-4 p-4 pb-10">
+        <CabecalhoRelatorio visita={visita} />
+
         {visita.status === 'finalizada' && (
           <p className="rounded-lg bg-status-concluido/10 p-3 text-base font-semibold text-status-concluido">
             ✅ Visita concluída em {new Date(visita.dataVisita).toLocaleDateString('pt-BR')}
