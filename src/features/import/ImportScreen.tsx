@@ -33,8 +33,16 @@ export function ImportScreen() {
 
   useEffect(() => {
     getVisitaAtiva().then((v) => setVisitaAtiva(v ?? null))
-    setDriveApiKey(getDriveApiKeySalva())
-    setDriveLink(getDriveLinkSalvo())
+    const chaveSalva = getDriveApiKeySalva()
+    const linkSalvo = getDriveLinkSalvo()
+    setDriveApiKey(chaveSalva)
+    setDriveLink(linkSalvo)
+    // Já tem chave e link salvos de uma vez anterior: busca sozinho, sem
+    // precisar preencher nem clicar em nada — só se estiver online, pra não
+    // atrasar/travar a abertura do app sem sinal.
+    if (chaveSalva.trim() && linkSalvo.trim() && navigator.onLine) {
+      buscarEProcessar(chaveSalva, linkSalvo)
+    }
   }, [])
 
   async function processarArquivo(file: File) {
@@ -61,19 +69,23 @@ export function ImportScreen() {
     }
   }
 
-  async function handleBuscarDrive() {
+  async function buscarEProcessar(apiKey: string, link: string) {
     setDriveErro(null)
-    salvarDriveApiKey(driveApiKey)
-    salvarDriveLink(driveLink)
     setDriveCarregando(true)
     try {
-      const file = await buscarArquivoDrive(driveApiKey, driveLink)
+      const file = await buscarArquivoDrive(apiKey, link)
       await processarArquivo(file)
     } catch (err) {
       setDriveErro(err instanceof DriveApiError ? err.message : 'Não foi possível buscar o arquivo no Drive.')
     } finally {
       setDriveCarregando(false)
     }
+  }
+
+  function handleBuscarDrive() {
+    salvarDriveApiKey(driveApiKey)
+    salvarDriveLink(driveLink)
+    buscarEProcessar(driveApiKey, driveLink)
   }
 
   async function handleIniciarVisita() {
@@ -110,8 +122,9 @@ export function ImportScreen() {
         <Card>
           <h2 className="text-lg font-bold text-brand-dark">Importar automaticamente do Drive</h2>
           <p className="mt-1 text-base text-gray-600">
-            Busca o arquivo direto do Google Drive (precisa estar compartilhado como "Qualquer
-            pessoa com o link"). Preencha uma vez — fica salvo neste aparelho.
+            Preencha uma vez — fica salvo neste aparelho. Nas próximas vezes, com internet, o
+            app já busca sozinho assim que você abrir esta tela (arquivo precisa continuar
+            compartilhado como "Qualquer pessoa com o link").
           </p>
 
           <label className="mt-3 block text-sm font-semibold text-gray-600">Chave de API do Google</label>
