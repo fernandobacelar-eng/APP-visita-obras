@@ -1,5 +1,6 @@
 import { getVisita, getResumoVisita } from '../../db/repository'
 import type { Foto, Audio } from '../../types'
+import { gerarRelatorioXlsxBase64 } from './relatorioXlsx'
 
 // Embutidos no build via .env.local (não versionado) — mesmo esquema da
 // chave do Drive: nunca comitados no repositório público.
@@ -170,6 +171,9 @@ export async function sincronizarVisita(
     dataVisita: visita.dataVisita,
     status: visita.status,
     pavimentos: pavimentosPayload,
+    // Planilha pronta pra abrir direto no Drive/Excel, além do JSON bruto —
+    // sempre reenviada (é pequena, só texto), sempre substitui a anterior.
+    relatorioXlsxBase64: gerarRelatorioXlsxBase64(visita, pavimentos),
   }
 
   let resposta: Response
