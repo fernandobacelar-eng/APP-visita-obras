@@ -50,6 +50,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
+        // jsPDF's optional doc.html() plugin (html2canvas/dompurify) ships as
+        // separate lazy chunks — we never call doc.html(), so they're dead
+        // weight; skip precaching them to keep the offline install lean.
+        globIgnores: ['**/html2canvas-*.js', '**/purify.es-*.js', '**/index.es-*.js'],
         // Everything is client-side; no runtime API caching needed.
         navigateFallback: `${base}index.html`,
       },
