@@ -67,8 +67,8 @@ export function ImportScreen() {
     if (!parseResult) return
     setIniciando(true)
     try {
-      await criarVisitaComPavimentos(OBRA_NOME, parseResult.pavimentos)
-      navigate('/pavimentos')
+      const visitaId = await criarVisitaComPavimentos(OBRA_NOME, parseResult.pavimentos)
+      navigate(`/visitas/${visitaId}/pavimentos`)
     } finally {
       setIniciando(false)
     }
@@ -89,7 +89,7 @@ export function ImportScreen() {
               {visitaAtiva.obraNome} — importada em{' '}
               {new Date(visitaAtiva.dataImportacao).toLocaleDateString('pt-BR')}
             </p>
-            <Button className="mt-3" fullWidth onClick={() => navigate('/pavimentos')}>
+            <Button className="mt-3" fullWidth onClick={() => navigate(`/visitas/${visitaAtiva.id}/pavimentos`)}>
               {visitaAtiva.status === 'finalizada' ? 'Ver visita' : 'Continuar visita'}
             </Button>
           </Card>
@@ -121,6 +121,10 @@ export function ImportScreen() {
             {iniciando ? 'Iniciando…' : '▶ Começar visita'}
           </Button>
         )}
+
+        <Button variant="secondary" fullWidth onClick={() => navigate('/visitas')}>
+          📋 Visitas anteriores
+        </Button>
       </main>
     </div>
   )

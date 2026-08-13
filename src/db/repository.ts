@@ -9,13 +9,21 @@ import type {
 } from '../types'
 
 /**
- * Retorna a visita atual (a única que existe por vez — importar uma nova
- * planilha substitui a anterior), esteja ela em andamento ou já finalizada.
- * Não filtra por status: uma visita concluída continua sendo "a visita
- * atual" até que uma nova planilha seja importada.
+ * Retorna a visita mais recente (usada só como atalho "continuar de onde
+ * parei" na tela inicial). Todas as visitas ficam guardadas — para acessar
+ * uma específica, use getVisita(id); para listar todas, use listarVisitas().
  */
 export async function getVisitaAtiva(): Promise<Visita | undefined> {
   return db.visitas.orderBy('id').last()
+}
+
+export async function getVisita(visitaId: number): Promise<Visita | undefined> {
+  return db.visitas.get(visitaId)
+}
+
+export async function listarVisitas(): Promise<Visita[]> {
+  const todas = await db.visitas.toArray()
+  return todas.sort((a, b) => b.dataVisita.localeCompare(a.dataVisita))
 }
 
 export async function criarVisitaComPavimentos(
@@ -25,42 +33,6 @@ export async function criarVisitaComPavimentos(
     servicos: { nome: string; status: string; statusNormalizado: Servico['statusNormalizado']; observacao?: string }[]
   }[]
 ): Promise<number> {
-  const anteriores = await db.visitas.where('status').equals('em_andamento').toArray()
-  await db.transaction(
-    'rw',
-    [db.visitas, db.pavimentos, db.servicos, db.registros, db.fotos, db.audios],
-    async () => {
-    for (const antiga of anteriores) {
-      if (antiga.id == null) continue
-      const pavs = await db.pavimentos.where('visitaId').equals(antiga.id).toArray()
-      for (const p of pavs) {
-        if (p.id == null) continue
-        const servs = await db.servicos.where('pavimentoId').equals(p.id).toArray()
-        for (const s of servs) {
-          if (s.id == null) continue
-          const regs = await db.registros.where('servicoId').equals(s.id).toArray()
-          for (const r of regs) {
-            if (r.id == null) continue
-            await db.fotos.where('registroId').equals(r.id).delete()
-            await db.audios.where('registroId').equals(r.id).delete()
-          }
-          await db.registros.where('servicoId').equals(s.id).delete()
-        }
-        await db.servicos.where('pavimentoId').equals(p.id).delete()
-
-        const regsGerais = await db.registros.where('pavimentoId').equals(p.id).toArray()
-        for (const r of regsGerais) {
-          if (r.id == null) continue
-          await db.fotos.where('registroId').equals(r.id).delete()
-          await db.audios.where('registroId').equals(r.id).delete()
-        }
-        await db.registros.where('pavimentoId').equals(p.id).delete()
-      }
-      await db.pavimentos.where('visitaId').equals(antiga.id).delete()
-      await db.visitas.delete(antiga.id)
-    }
-  })
-
   const agora = new Date().toISOString()
   const visitaId = await db.visitas.add({
     obraNome,

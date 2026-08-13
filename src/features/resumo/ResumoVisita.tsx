@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { TopBar } from '../../components/TopBar'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
 import { StatusBadge } from '../../components/StatusBadge'
 import { EmptyState } from '../../components/EmptyState'
-import { getVisitaAtiva, getResumoVisita, type ResumoPavimento, type ResumoServico } from '../../db/repository'
+import { getVisita, getResumoVisita, type ResumoPavimento, type ResumoServico } from '../../db/repository'
 import type { Foto, Visita } from '../../types'
 import { useObjectUrl } from '../../hooks/useObjectUrl'
 import { STATUS_LABEL } from '../../lib/status'
@@ -124,6 +124,8 @@ function ServicoResumo({ servico }: { servico: ResumoServico }) {
 
 export function ResumoVisita() {
   const navigate = useNavigate()
+  const { visitaId } = useParams<{ visitaId: string }>()
+  const id = Number(visitaId)
   const [visita, setVisita] = useState<Visita | null>(null)
   const [pavimentos, setPavimentos] = useState<ResumoPavimento[]>([])
   const [apenasComRegistro, setApenasComRegistro] = useState(true)
@@ -131,7 +133,7 @@ export function ResumoVisita() {
 
   useEffect(() => {
     async function carregar() {
-      const v = await getVisitaAtiva()
+      const v = await getVisita(id)
       if (!v || v.id == null) {
         setCarregando(false)
         return
@@ -141,16 +143,16 @@ export function ResumoVisita() {
       setCarregando(false)
     }
     carregar()
-  }, [])
+  }, [id])
 
   if (carregando) return null
 
   if (!visita) {
     return (
       <div className="flex min-h-svh flex-col bg-gray-50">
-        <TopBar title="Resumo" onBack />
+        <TopBar title="Resumo" onBack={() => navigate('/visitas')} />
         <main className="flex-1 p-4">
-          <EmptyState title="Nenhuma visita ativa" description="Importe uma planilha para começar." />
+          <EmptyState title="Visita não encontrada" description="Volte e escolha uma visita na lista." />
         </main>
       </div>
     )
@@ -179,7 +181,11 @@ export function ResumoVisita() {
 
   return (
     <div className="flex min-h-svh flex-col bg-gray-50">
-      <TopBar title="Resumo da visita" subtitle={visita.obraNome} onBack={() => navigate('/pavimentos')} />
+      <TopBar
+        title="Resumo da visita"
+        subtitle={visita.obraNome}
+        onBack={() => navigate(`/visitas/${visita.id}/pavimentos`)}
+      />
 
       <main className="flex-1 space-y-4 p-4 pb-10">
         <CabecalhoRelatorio visita={visita} />

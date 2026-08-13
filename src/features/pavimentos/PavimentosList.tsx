@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { TopBar } from '../../components/TopBar'
 import { Card } from '../../components/Card'
 import { EmptyState } from '../../components/EmptyState'
 import { Button } from '../../components/Button'
 import {
-  getVisitaAtiva,
+  getVisita,
   getPavimentos,
   contarRegistrosDoPavimento,
   getServicosEmExecucao,
@@ -21,12 +21,14 @@ interface LinhaPavimento extends Pavimento {
 
 export function PavimentosList() {
   const navigate = useNavigate()
+  const { visitaId } = useParams<{ visitaId: string }>()
+  const id = Number(visitaId)
   const [visita, setVisita] = useState<Visita | null | 'carregando'>('carregando')
   const [linhas, setLinhas] = useState<LinhaPavimento[] | null>(null)
 
   useEffect(() => {
     async function carregar() {
-      const v = await getVisitaAtiva()
+      const v = await getVisita(id)
       if (!v || v.id == null) {
         setVisita(null)
         return
@@ -45,7 +47,7 @@ export function PavimentosList() {
       setLinhas(comContagem)
     }
     carregar()
-  }, [])
+  }, [id])
 
   useEffect(() => {
     if (visita === null) navigate('/', { replace: true })
@@ -56,7 +58,7 @@ export function PavimentosList() {
     if (visita.status !== 'finalizada') {
       await finalizarVisita(visita.id)
     }
-    navigate('/resumo')
+    navigate(`/visitas/${visita.id}/resumo`)
   }
 
   if (visita === 'carregando' || visita === null || linhas === null) return null
@@ -66,9 +68,10 @@ export function PavimentosList() {
       <TopBar
         title={visita.obraNome}
         subtitle={`${linhas.length} pavimento(s)`}
+        onBack={() => navigate('/visitas')}
         right={
           <button
-            onClick={() => navigate('/resumo')}
+            onClick={() => navigate(`/visitas/${visita.id}/resumo`)}
             className="rounded-full px-3 py-2 text-sm font-semibold active:bg-white/15"
           >
             Resumo

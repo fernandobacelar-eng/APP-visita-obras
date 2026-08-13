@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { ImportScreen } from './features/import/ImportScreen'
+import { VisitasAnteriores } from './features/visitas/VisitasAnteriores'
 import { PavimentosList } from './features/pavimentos/PavimentosList'
 import { AnotacoesGeraisPavimento } from './features/pavimentos/AnotacoesGeraisPavimento'
 import { ServicosList } from './features/servicos/ServicosList'
@@ -11,11 +12,12 @@ function App() {
     <HashRouter>
       <Routes>
         <Route path="/" element={<ImportScreen />} />
-        <Route path="/pavimentos" element={<PavimentosList />} />
+        <Route path="/visitas" element={<VisitasAnteriores />} />
+        <Route path="/visitas/:visitaId/pavimentos" element={<PavimentosList />} />
+        <Route path="/visitas/:visitaId/resumo" element={<ResumoVisita />} />
         <Route path="/pavimentos/:pavimentoId" element={<ServicosList />} />
         <Route path="/pavimentos/:pavimentoId/anotacoes" element={<AnotacoesGeraisPavimento />} />
         <Route path="/servicos/:servicoId" element={<RegistroServico />} />
-        <Route path="/resumo" element={<ResumoVisita />} />
       </Routes>
     </HashRouter>
   )
