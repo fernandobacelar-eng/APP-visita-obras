@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import type { ResumoPavimento, ResumoServico } from '../../db/repository'
-import type { Visita, Foto } from '../../types'
+import type { Visita, Foto, StatusServico } from '../../types'
 import { STATUS_LABEL } from '../../lib/status'
 import logoBtb from '../../assets/btb-logo.png'
 import bannerPredio from '../../assets/villa-lobos-banner.jpg'
@@ -9,6 +9,20 @@ const PAGINA_LARGURA = 210
 const PAGINA_ALTURA = 297
 const MARGEM = 15
 const LARGURA_UTIL = PAGINA_LARGURA - MARGEM * 2
+
+// Mesmas cores das variáveis --color-status-* do app (src/index.css).
+const STATUS_COR: Record<StatusServico, [number, number, number]> = {
+  nao_iniciado: [107, 114, 128],
+  em_execucao: [234, 179, 8],
+  concluido: [22, 163, 74],
+  pendencia: [220, 38, 38],
+  outro: [107, 114, 128],
+}
+
+function tomClaro([r, g, b]: [number, number, number]): [number, number, number] {
+  const misturar = (c: number) => Math.round(c + (255 - c) * 0.85)
+  return [misturar(r), misturar(g), misturar(b)]
+}
 
 async function urlParaDataUrl(url: string): Promise<string> {
   const resposta = await fetch(url)
@@ -83,6 +97,34 @@ class ConstrutorPdf {
     this.doc.setDrawColor(200, 200, 200)
     this.doc.line(MARGEM, this.y, PAGINA_LARGURA - MARGEM, this.y)
     this.y += 4
+  }
+
+  // Nome do serviço em negrito seguido do selo de status colorido, como na tela.
+  nomeServicoComStatus(nome: string, status: StatusServico) {
+    this.garantirEspaco(8)
+    this.doc.setFont('helvetica', 'bold')
+    this.doc.setFontSize(11)
+    this.doc.setTextColor(30, 30, 30)
+    const larguraNome = this.doc.getTextWidth(nome)
+    this.doc.text(nome, MARGEM, this.y)
+
+    const [r, g, b] = STATUS_COR[status] ?? STATUS_COR.outro
+    const [rc, gc, bc] = tomClaro([r, g, b])
+    this.doc.setFontSize(8)
+    const label = STATUS_LABEL[status]
+    const larguraLabel = this.doc.getTextWidth(label)
+    const larguraBadge = larguraLabel + 6
+    const alturaBadge = 5.2
+    const xBadge = MARGEM + larguraNome + 4
+    const yBadge = this.y - 3.9
+    this.doc.setFillColor(rc, gc, bc)
+    this.doc.setDrawColor(r, g, b)
+    this.doc.setLineWidth(0.2)
+    this.doc.roundedRect(xBadge, yBadge, larguraBadge, alturaBadge, 1.3, 1.3, 'FD')
+    this.doc.setTextColor(r, g, b)
+    this.doc.text(label, xBadge + 3, this.y - 0.4)
+
+    this.y += 6
   }
 
   async imagens(fotos: Foto[]) {
@@ -184,7 +226,7 @@ export async function gerarRelatorioPdfBase64(visita: Visita, pavimentos: Resumo
 
     for (const s of servicosComConteudo) {
       c.garantirEspaco(12)
-      c.texto(`${s.nome}  —  ${STATUS_LABEL[s.statusNormalizado]}`, { tamanho: 11, negrito: true, espacoDepois: 1 })
+      c.nomeServicoComStatus(s.nome, s.statusNormalizado)
       if (s.statusOriginal !== s.statusNormalizado) {
         c.texto(`Status alterado nesta visita: ${STATUS_LABEL[s.statusOriginal]} -> ${STATUS_LABEL[s.statusNormalizado]}`, {
           tamanho: 9,

@@ -1,6 +1,5 @@
 import { getVisita, getResumoVisita } from '../../db/repository'
 import type { Foto, Audio } from '../../types'
-import { gerarRelatorioXlsxBase64 } from './relatorioXlsx'
 import { gerarRelatorioPdfBase64 } from './relatorioPdf'
 
 // Embutidos no build via .env.local (não versionado) — mesmo esquema da
@@ -172,9 +171,8 @@ export async function sincronizarVisita(
     dataVisita: visita.dataVisita,
     status: visita.status,
     pavimentos: pavimentosPayload,
-    // Planilha e PDF prontos pra abrir direto do Drive, além do JSON bruto —
-    // sempre reenviados (regenerados do estado atual), sempre substituem os anteriores.
-    relatorioXlsxBase64: gerarRelatorioXlsxBase64(visita, pavimentos),
+    // Relatório em PDF pronto pra abrir direto do Drive, além do JSON bruto —
+    // sempre reenviado (regenerado do estado atual), sempre substitui o anterior.
     relatorioPdfBase64: await gerarRelatorioPdfBase64(visita, pavimentos),
   }
 
