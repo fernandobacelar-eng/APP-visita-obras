@@ -12,6 +12,7 @@ import {
   finalizarVisita,
 } from '../../db/repository'
 import type { Visita, Pavimento } from '../../types'
+import { sincronizarVisita } from '../sync/driveSync'
 
 interface LinhaPavimento extends Pavimento {
   total: number
@@ -58,6 +59,10 @@ export function PavimentosList() {
     if (visita.status !== 'finalizada') {
       await finalizarVisita(visita.id)
     }
+    // Melhor esforço: tenta fazer o backup no Drive já ao concluir, mas sem
+    // travar a navegação — se falhar (sem sinal, por exemplo), o botão de
+    // sincronizar na tela de resumo permite tentar de novo depois.
+    sincronizarVisita(visita.id).catch(() => {})
     navigate(`/visitas/${visita.id}/resumo`)
   }
 

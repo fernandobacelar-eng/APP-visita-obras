@@ -11,6 +11,11 @@ import { useObjectUrl } from '../../hooks/useObjectUrl'
 import { STATUS_LABEL } from '../../lib/status'
 import logoBtb from '../../assets/btb-logo.png'
 import bannerPredio from '../../assets/villa-lobos-banner.jpg'
+import { sincronizarVisita, getUltimaSincronizacao, DriveSyncError } from '../sync/driveSync'
+
+function formatarDataHora(iso: string): string {
+  return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+}
 
 function FotoRelatorio({ foto }: { foto: Foto }) {
   const url = useObjectUrl(foto.blob)
@@ -130,6 +135,9 @@ export function ResumoVisita() {
   const [pavimentos, setPavimentos] = useState<ResumoPavimento[]>([])
   const [apenasComRegistro, setApenasComRegistro] = useState(true)
   const [carregando, setCarregando] = useState(true)
+  const [sincronizando, setSincronizando] = useState(false)
+  const [erroSync, setErroSync] = useState<string | null>(null)
+  const [ultimaSync, setUltimaSync] = useState<string | null>(null)
 
   useEffect(() => {
     async function carregar() {
@@ -140,10 +148,24 @@ export function ResumoVisita() {
       }
       setVisita(v)
       setPavimentos(await getResumoVisita(v.id))
+      setUltimaSync(getUltimaSincronizacao(v.id))
       setCarregando(false)
     }
     carregar()
   }, [id])
+
+  async function handleSincronizar() {
+    setErroSync(null)
+    setSincronizando(true)
+    try {
+      await sincronizarVisita(id)
+      setUltimaSync(getUltimaSincronizacao(id))
+    } catch (err) {
+      setErroSync(err instanceof DriveSyncError ? err.message : 'Não foi possível sincronizar agora.')
+    } finally {
+      setSincronizando(false)
+    }
+  }
 
   if (carregando) return null
 
@@ -206,9 +228,23 @@ export function ResumoVisita() {
             />
             Mostrar apenas serviços com registro
           </label>
-          <Button variant="secondary" onClick={() => window.print()}>
-            🖨 Gerar relatório
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button variant="secondary" disabled={sincronizando} onClick={handleSincronizar}>
+              {sincronizando ? 'Sincronizando…' : '☁️ Sincronizar com Drive'}
+            </Button>
+            <Button variant="secondary" onClick={() => window.print()}>
+              🖨 Gerar relatório
+            </Button>
+          </div>
+        </div>
+
+        <div className="no-print">
+          {erroSync && (
+            <p className="rounded-lg bg-status-pendencia/10 p-3 text-base text-status-pendencia">{erroSync}</p>
+          )}
+          {!erroSync && ultimaSync && (
+            <p className="text-sm text-gray-500">☁️ Backup no Drive: {formatarDataHora(ultimaSync)}</p>
+          )}
         </div>
 
         {pavimentosFiltrados.length === 0 && (
